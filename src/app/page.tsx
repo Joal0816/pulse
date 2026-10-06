@@ -15,6 +15,7 @@ import {
   Download,
   Bell,
   Mail,
+  Layers,
 } from "lucide-react";
 import { SiteStats, MonitoredSite, NetworkSummary } from "@/lib/types";
 import { SnippetModal } from "@/components/SnippetModal";
@@ -114,7 +115,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-white tracking-tight">PULSE</h1>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#152030] border border-[#1c2a3d] text-cyan-400">
-                  v1.3.0
+                  v1.4.0
                 </span>
                 <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
                   joalvergs.tech
@@ -227,31 +228,31 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* 4. Total Views (Since Deployment) */}
-              <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-cyan-400">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Total Views</span>
+              {/* 4. TOTAL LIFETIME VIEWS (NETWORK-WIDE) */}
+              <div className="bg-[#0f1622] border border-cyan-500/40 bg-gradient-to-b from-cyan-950/20 to-transparent rounded-xl p-4 flex flex-col justify-between shadow-[0_0_15px_rgba(0,240,255,0.05)]">
+                <div className="flex items-center justify-between text-cyan-300">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Total Lifetime Views</span>
                   <Eye className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-2xl font-bold font-mono text-cyan-300 tabular-nums">
                     {data?.allTimeTotalPageviews?.toLocaleString() || 0}
                   </span>
-                  <span className="text-[10px] font-mono text-cyan-500/80">lifetime</span>
+                  <span className="text-[10px] font-mono text-cyan-500/80">all time</span>
                 </div>
               </div>
 
-              {/* 5. Total Viewers (Since Deployment) */}
-              <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-4 flex flex-col justify-between">
-                <div className="flex items-center justify-between text-cyan-400">
-                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Total Viewers</span>
+              {/* 5. TOTAL LIFETIME VIEWERS (NETWORK-WIDE) */}
+              <div className="bg-[#0f1622] border border-cyan-500/40 bg-gradient-to-b from-cyan-950/20 to-transparent rounded-xl p-4 flex flex-col justify-between shadow-[0_0_15px_rgba(0,240,255,0.05)]">
+                <div className="flex items-center justify-between text-cyan-300">
+                  <span className="text-[10px] font-mono uppercase tracking-wider font-semibold">Total Lifetime Viewers</span>
                   <Users className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="mt-2 flex items-baseline gap-1.5">
                   <span className="text-2xl font-bold font-mono text-cyan-200 tabular-nums">
                     {data?.allTimeTotalVisitors?.toLocaleString() || 0}
                   </span>
-                  <span className="text-[10px] font-mono text-cyan-500/80">since launch</span>
+                  <span className="text-[10px] font-mono text-cyan-500/80">unique</span>
                 </div>
               </div>
 
@@ -280,7 +281,7 @@ export default function Dashboard() {
                     Monitored Deployments ({data?.sites.length || 0})
                   </h2>
                   <p className="text-[11px] font-mono text-slate-400">
-                    Lifetime viewers calculated from initial domain deployment records + live telemetry.
+                    Real-time telemetry breakdown: Lifetime Views, Lifetime Viewers & 24H activity per web app.
                   </p>
                 </div>
                 <div className="text-[11px] font-mono text-slate-400">
@@ -330,23 +331,31 @@ export default function Dashboard() {
                         Launch: {st.site.deployedDate} ({st.daysDeployed} days ago)
                       </div>
 
-                      {/* Card Metric Chips: 24h & All-Time Dual Counters */}
-                      <div className="mt-3 pt-3 border-t border-[#1c2a3d]/70 grid grid-cols-4 gap-2 text-center font-mono text-xs">
-                        <div>
-                          <div className="text-[9px] text-slate-400">LIVE</div>
-                          <div className="font-bold text-emerald-400 tabular-nums">{st.liveVisitors}</div>
+                      {/* Card Metric Chips: Lifetime Views & Viewers + 24h & Latency */}
+                      <div className="mt-4 pt-3 border-t border-[#1c2a3d]/70 grid grid-cols-4 gap-2 text-center font-mono">
+                        <div className="bg-[#080c12]/60 rounded-lg py-1.5 px-1 border border-[#1c2a3d]/50">
+                          <div className="text-[9px] text-cyan-400 font-semibold truncate">LIFE VIEWS</div>
+                          <div className="font-bold text-cyan-300 tabular-nums text-xs mt-0.5">
+                            {st.allTimePageviews.toLocaleString()}
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-[9px] text-slate-400">24H VIEWS</div>
-                          <div className="font-bold text-white tabular-nums">{st.pageviews24h}</div>
+                        <div className="bg-[#080c12]/60 rounded-lg py-1.5 px-1 border border-[#1c2a3d]/50">
+                          <div className="text-[9px] text-cyan-400 font-semibold truncate">LIFE USERS</div>
+                          <div className="font-bold text-cyan-200 tabular-nums text-xs mt-0.5">
+                            {st.allTimeVisitors.toLocaleString()}
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-[9px] text-cyan-400">TOTAL VIEWERS</div>
-                          <div className="font-bold text-cyan-300 tabular-nums">{st.allTimeVisitors.toLocaleString()}</div>
+                        <div className="bg-[#080c12]/60 rounded-lg py-1.5 px-1 border border-[#1c2a3d]/50">
+                          <div className="text-[9px] text-slate-400 truncate">24H VIEWS</div>
+                          <div className="font-bold text-white tabular-nums text-xs mt-0.5">
+                            {st.pageviews24h.toLocaleString()}
+                          </div>
                         </div>
-                        <div>
-                          <div className="text-[9px] text-slate-400">LATENCY</div>
-                          <div className="font-bold text-emerald-400 tabular-nums">{st.health.latencyMs}ms</div>
+                        <div className="bg-[#080c12]/60 rounded-lg py-1.5 px-1 border border-[#1c2a3d]/50">
+                          <div className="text-[9px] text-emerald-400 truncate">LATENCY</div>
+                          <div className="font-bold text-emerald-400 tabular-nums text-xs mt-0.5">
+                            {st.health.latencyMs}ms
+                          </div>
                         </div>
                       </div>
 

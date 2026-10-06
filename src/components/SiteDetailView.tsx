@@ -112,15 +112,17 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
           </div>
         </div>
 
-        <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-3.5">
-          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Views (Since Deployment)</div>
+        {/* Total Lifetime Views for this webapp */}
+        <div className="bg-[#0f1622] border border-cyan-500/30 bg-cyan-950/20 rounded-xl p-3.5">
+          <div className="text-[10px] font-mono text-cyan-300 uppercase tracking-wider font-semibold">Total Lifetime Views</div>
           <div className="text-xl font-bold font-mono text-cyan-300 mt-1 tabular-nums">
             {(stats.allTimePageviews || 0).toLocaleString()}
           </div>
         </div>
 
-        <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-3.5">
-          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Viewers (Since Deployment)</div>
+        {/* Total Lifetime Viewers for this webapp */}
+        <div className="bg-[#0f1622] border border-cyan-500/30 bg-cyan-950/20 rounded-xl p-3.5">
+          <div className="text-[10px] font-mono text-cyan-300 uppercase tracking-wider font-semibold">Total Lifetime Viewers</div>
           <div className="text-xl font-bold font-mono text-cyan-200 mt-1 tabular-nums">
             {(stats.allTimeVisitors || 0).toLocaleString()}
           </div>
