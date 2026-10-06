@@ -108,8 +108,13 @@ export interface SiteHealthCheck {
 
 export interface SiteStats {
   site: MonitoredSite;
+  // 24-hour metrics
   pageviews24h: number;
   visitors24h: number;
+  // All-time metrics (Lifetime)
+  allTimePageviews: number;
+  allTimeVisitors: number;
+  // Live now (Active in last 5 min)
   liveVisitors: number;
   bounceRate: number;
   avgDurationSec: number;
@@ -120,4 +125,29 @@ export interface SiteStats {
   devices: { name: string; count: number; pct: number }[];
   browsers: { name: string; count: number; pct: number }[];
   timeseries: { hour: string; views: number; visitors: number }[];
+  customEvents: { name: string; count: number }[];
+}
+
+export interface NetworkSummary {
+  sites: SiteStats[];
+  // 24-hour network metrics
+  totalPageviews24h: number;
+  totalVisitors24h: number;
+  // All-time network metrics
+  allTimeTotalPageviews: number;
+  allTimeTotalVisitors: number;
+  // Real-time live now
+  liveVisitorsNow: number;
+  networkUptimeAvg: number;
+  avgLatencyMs: number;
+  systemLastChecked: string;
+  recentAlerts: {
+    id: number;
+    site: string;
+    type: string;
+    message: string;
+    statusCode: number | null;
+    latencyMs: number | null;
+    createdAt: string;
+  }[];
 }

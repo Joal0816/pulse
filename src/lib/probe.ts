@@ -1,7 +1,11 @@
 import { MONITORED_SITES, SiteHealthCheck } from "./types";
 import { recordHealth, store } from "./store";
+import { logAlert } from "./alerts";
 
-export async function pingSite(url: string, timeoutMs = 7000): Promise<{ status: number; latencyMs: number; ok: boolean; error?: string }> {
+export async function pingSite(
+  url: string,
+  timeoutMs = 7000
+): Promise<{ status: number; latencyMs: number; ok: boolean; error?: string }> {
   const start = performance.now();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -38,7 +42,6 @@ export async function pingSite(url: string, timeoutMs = 7000): Promise<{ status:
 
 export async function probeAllSites(force = false): Promise<Record<string, SiteHealthCheck>> {
   const now = Date.now();
-  // Throttle probes to max once every 20 seconds unless forced
   if (!force && now - store.lastChecked < 20000) {
     const latest: Record<string, SiteHealthCheck> = {};
     for (const site of MONITORED_SITES) {
@@ -66,6 +69,14 @@ export async function probeAllSites(force = false): Promise<Record<string, SiteH
         error: result.error,
         checkedAt: new Date(now).toISOString(),
       };
+
+      // Check if alert needs to be triggered
+      if (!result.ok) {
+        logAlert(site.id, "outage", result.error || `HTTP ${result.status}`, result.status, result.latencyMs);
+      } else if (result.latencyMs > 2500) {
+        logAlert(site.id, "latency", `High edge latency: ${result.latencyMs}ms`, result.status, result.latencyMs);
+      }
+
       recordHealth(site.id, check);
       return check;
     })

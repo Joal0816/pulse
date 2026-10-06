@@ -1,7 +1,8 @@
 import { store } from "./store";
 import { getDb } from "./db";
-import { MONITORED_SITES, SiteStats, SiteHealthCheck } from "./types";
+import { MONITORED_SITES, SiteStats, SiteHealthCheck, NetworkSummary } from "./types";
 import { probeAllSites } from "./probe";
+import { getRecentAlerts } from "./alerts";
 
 function parseUserAgent(ua: string) {
   let browser = "Other";
@@ -34,6 +35,7 @@ interface RawPulseEvent {
   site: string;
   type: string;
   path: string;
+  title: string | null;
   referrer: string | null;
   session: string;
   browser: string | null;
@@ -42,26 +44,17 @@ interface RawPulseEvent {
   created_at: string;
 }
 
-export async function aggregateStats(forceProbes = false): Promise<{
-  sites: SiteStats[];
-  totalPageviews24h: number;
-  totalVisitors24h: number;
-  liveVisitorsNow: number;
-  networkUptimeAvg: number;
-  avgLatencyMs: number;
-  systemLastChecked: string;
-}> {
+export async function aggregateStats(forceProbes = false): Promise<NetworkSummary> {
   const healthMap = await probeAllSites(forceProbes);
   const now = Date.now();
   const past24hIso = new Date(now - 24 * 3600 * 1000).toISOString();
-  const past5mIso = new Date(now - 5 * 60 * 1000).toISOString();
-
   const sql = getDb();
 
+  // 1. Fetch 24-hour detailed events
   let rawEvents24h: RawPulseEvent[] = [];
   try {
     const rows = await sql`
-      SELECT site, type, path, referrer, session, browser, os, device, created_at
+      SELECT site, type, path, title, referrer, session, browser, os, device, created_at
       FROM pulse_events
       WHERE created_at >= ${past24hIso}::timestamptz
       ORDER BY created_at DESC
@@ -69,8 +62,41 @@ export async function aggregateStats(forceProbes = false): Promise<{
     `;
     rawEvents24h = rows as unknown as RawPulseEvent[];
   } catch (err) {
-    console.error("Failed to query pulse_events from Neon:", err);
+    console.error("Failed to query 24h pulse_events from Neon:", err);
   }
+
+  // 2. Fetch Lifetime / All-Time Summary totals per site
+  const allTimeSiteMap: Record<string, { totalViews: number; totalVisitors: number }> = {};
+  let allTimeTotalPageviews = 0;
+  let allTimeTotalVisitors = 0;
+
+  try {
+    const allTimeRows = await sql`
+      SELECT site, count(*) as total_views, count(DISTINCT session) as total_visitors
+      FROM pulse_events
+      GROUP BY site;
+    `;
+    for (const r of allTimeRows as any[]) {
+      allTimeSiteMap[r.site] = {
+        totalViews: Number(r.total_views) || 0,
+        totalVisitors: Number(r.total_visitors) || 0,
+      };
+    }
+
+    const overallLifetime = await sql`
+      SELECT count(*) as total_views, count(DISTINCT session) as total_visitors
+      FROM pulse_events;
+    `;
+    if (overallLifetime.length > 0) {
+      allTimeTotalPageviews = Number((overallLifetime[0] as any).total_views) || 0;
+      allTimeTotalVisitors = Number((overallLifetime[0] as any).total_visitors) || 0;
+    }
+  } catch (err) {
+    console.error("Failed to query lifetime stats from Neon:", err);
+  }
+
+  // 3. Fetch recent system alerts
+  const recentAlerts = await getRecentAlerts(6);
 
   let totalPageviews24h = 0;
   const globalUniqueSessions = new Set<string>();
@@ -93,6 +119,21 @@ export async function aggregateStats(forceProbes = false): Promise<{
     const liveSessionSet = new Set(siteEvents5m.map((e) => e.session));
     const liveVisitors = liveSessionSet.size;
     liveSessionSet.forEach((s) => globalLiveSessions.add(s));
+
+    // Lifetime metrics for site
+    const allTimeStats = allTimeSiteMap[site.id] || { totalViews: 0, totalVisitors: 0 };
+    const allTimePageviews = Math.max(allTimeStats.totalViews, pageviews24h);
+    const allTimeVisitors = Math.max(allTimeStats.totalVisitors, visitors24h);
+
+    // Custom events count
+    const customEventMap: Record<string, number> = {};
+    siteEvents
+      .filter((e) => e.type === "event")
+      .forEach((e) => {
+        const evName = e.title || "custom_action";
+        customEventMap[evName] = (customEventMap[evName] || 0) + 1;
+      });
+    const customEvents = Object.entries(customEventMap).map(([name, count]) => ({ name, count }));
 
     // Top Pages
     const pageCounts: Record<string, number> = {};
@@ -210,6 +251,8 @@ export async function aggregateStats(forceProbes = false): Promise<{
       site,
       pageviews24h,
       visitors24h,
+      allTimePageviews,
+      allTimeVisitors,
       liveVisitors,
       bounceRate: pageviews24h > 0 ? 32.5 : 0,
       avgDurationSec: pageviews24h > 0 ? 76 : 0,
@@ -220,6 +263,7 @@ export async function aggregateStats(forceProbes = false): Promise<{
       devices,
       browsers,
       timeseries,
+      customEvents,
     };
   });
 
@@ -230,9 +274,12 @@ export async function aggregateStats(forceProbes = false): Promise<{
     sites: sitesStats,
     totalPageviews24h,
     totalVisitors24h: globalUniqueSessions.size,
+    allTimeTotalPageviews: Math.max(allTimeTotalPageviews, totalPageviews24h),
+    allTimeTotalVisitors: Math.max(allTimeTotalVisitors, globalUniqueSessions.size),
     liveVisitorsNow: globalLiveSessions.size,
     networkUptimeAvg,
     avgLatencyMs,
     systemLastChecked: new Date().toISOString(),
+    recentAlerts,
   };
 }
