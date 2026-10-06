@@ -44,17 +44,6 @@ interface RawPulseEvent {
   created_at: string;
 }
 
-// Baseline historical daily visitors estimated from domain deployment date
-const DEPLOYMENT_TRAFFIC_WEIGHT: Record<string, { dailyViews: number; dailyUniq: number }> = {
-  root: { dailyViews: 38, dailyUniq: 19 },
-  agapai: { dailyViews: 45, dailyUniq: 22 },
-  aruga: { dailyViews: 32, dailyUniq: 15 },
-  "barangay-connect": { dailyViews: 52, dailyUniq: 26 },
-  cup: { dailyViews: 28, dailyUniq: 14 },
-  oddjobs: { dailyViews: 41, dailyUniq: 20 },
-  oink: { dailyViews: 35, dailyUniq: 18 },
-};
-
 export async function aggregateStats(forceProbes = false): Promise<NetworkSummary> {
   const healthMap = await probeAllSites(forceProbes);
   const now = Date.now();
@@ -76,7 +65,7 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
     console.error("Failed to query 24h pulse_events from Neon:", err);
   }
 
-  // 2. Fetch recorded events grouped by site
+  // 2. Fetch all-time organic totals per site directly from Neon database
   const liveRecordedSiteMap: Record<string, { totalViews: number; totalVisitors: number }> = {};
   try {
     const allTimeRows = await sql`
@@ -126,15 +115,10 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
     const deployMs = new Date(site.deployedDate).getTime();
     const daysDeployed = Math.max(1, Math.floor((now - deployMs) / (24 * 3600 * 1000)));
 
-    // Cumulative views since domain deployment
+    // Pure organic counts directly from Neon DB table
     const recorded = liveRecordedSiteMap[site.id] || { totalViews: 0, totalVisitors: 0 };
-    const baseWeight = DEPLOYMENT_TRAFFIC_WEIGHT[site.id] || { dailyViews: 30, dailyUniq: 15 };
-
-    const baselineViews = daysDeployed * baseWeight.dailyViews;
-    const baselineVisitors = daysDeployed * baseWeight.dailyUniq;
-
-    const allTimePageviews = baselineViews + recorded.totalViews;
-    const allTimeVisitors = baselineVisitors + recorded.totalVisitors;
+    const allTimePageviews = recorded.totalViews;
+    const allTimeVisitors = recorded.totalVisitors;
 
     allTimeTotalPageviews += allTimePageviews;
     allTimeTotalVisitors += allTimeVisitors;
@@ -155,9 +139,8 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
       const p = (e.path || "/").split("?")[0] || "/";
       pageCounts[p] = (pageCounts[p] || 0) + 1;
     });
-    if (Object.keys(pageCounts).length === 0) {
-      pageCounts["/"] = Math.max(1, pageviews24h);
-      pageCounts["/about"] = Math.round(pageviews24h * 0.3);
+    if (Object.keys(pageCounts).length === 0 && pageviews24h > 0) {
+      pageCounts["/"] = pageviews24h;
     }
     const topPages = Object.entries(pageCounts)
       .map(([path, views]) => ({ path, views }))
@@ -176,11 +159,6 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
       } catch {}
       refCounts[r] = (refCounts[r] || 0) + 1;
     });
-    if (Object.keys(refCounts).length === 0) {
-      refCounts["Direct / None"] = 12;
-      refCounts["github.com"] = 7;
-      refCounts["google.com"] = 4;
-    }
     const topReferrers = Object.entries(refCounts)
       .map(([source, views]) => ({ source, views }))
       .sort((a, b) => b.views - a.views)
@@ -195,16 +173,12 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
         devCounts[key] = (devCounts[key] || 0) + 1;
       }
     });
-    if (devCounts["Desktop"] === 0 && devCounts["Mobile"] === 0) {
-      devCounts["Desktop"] = 18;
-      devCounts["Mobile"] = 14;
-    }
     const totalDevs = devCounts["Desktop"] + devCounts["Mobile"] + devCounts["Tablet"] || 1;
     const devices = Object.entries(devCounts)
       .map(([name, count]) => ({
         name,
         count,
-        pct: Math.round((count / totalDevs) * 100),
+        pct: totalDevs > 0 && (count > 0) ? Math.round((count / totalDevs) * 100) : 0,
       }))
       .filter((d) => d.count > 0);
 
@@ -214,17 +188,12 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
       const b = e.browser || "Unknown";
       brwCounts[b] = (brwCounts[b] || 0) + 1;
     });
-    if (Object.keys(brwCounts).length === 0) {
-      brwCounts["Chrome"] = 16;
-      brwCounts["Safari"] = 10;
-      brwCounts["Firefox"] = 4;
-    }
     const totalBrws = Object.values(brwCounts).reduce((a, b) => a + b, 0) || 1;
     const browsers = Object.entries(brwCounts)
       .map(([name, count]) => ({
         name,
         count,
-        pct: Math.round((count / totalBrws) * 100),
+        pct: totalBrws > 0 ? Math.round((count / totalBrws) * 100) : 0,
       }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 4);
@@ -286,8 +255,8 @@ export async function aggregateStats(forceProbes = false): Promise<NetworkSummar
       allTimeVisitors,
       daysDeployed,
       liveVisitors,
-      bounceRate: 32.5,
-      avgDurationSec: 76,
+      bounceRate: 0,
+      avgDurationSec: 0,
       health,
       uptime24h,
       topPages,
