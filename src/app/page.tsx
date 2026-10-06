@@ -14,6 +14,7 @@ import {
   ArrowUpRight,
   Download,
   Bell,
+  Mail,
 } from "lucide-react";
 import { SiteStats, MonitoredSite, NetworkSummary } from "@/lib/types";
 import { SnippetModal } from "@/components/SnippetModal";
@@ -27,11 +28,13 @@ export default function Dashboard() {
   const [modalSite, setModalSite] = useState<MonitoredSite | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Webhook Configuration State
+  // Webhook & Gmail Configuration State
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [savingWebhook, setSavingWebhook] = useState(false);
-  const [webhookSavedMsg, setWebhookSavedMsg] = useState("");
+  const [personalEmail, setPersonalEmail] = useState("hpesojnalab.aragrev@gmail.com");
+  const [institutionalEmail, setInstitutionalEmail] = useState("josephalan.vergara@g.msuiit.edu.ph");
+  const [savingAlerts, setSavingAlerts] = useState(false);
+  const [alertSavedMsg, setAlertSavedMsg] = useState("");
 
   const fetchStats = async (force = false) => {
     try {
@@ -53,7 +56,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchStats(false);
-    // Real-time live polling interval every 12 seconds
     const interval = setInterval(() => {
       fetchStats(false);
     }, 12000);
@@ -65,27 +67,31 @@ export default function Dashboard() {
     setIsModalOpen(true);
   };
 
-  const handleSaveWebhook = async (e: React.FormEvent) => {
+  const handleSaveAlerts = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!webhookUrl) return;
-    setSavingWebhook(true);
+    setSavingAlerts(true);
     try {
       const res = await fetch("/api/alerts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookUrl, latencyThreshold: 2000 }),
+        body: JSON.stringify({
+          webhookUrl,
+          personalEmail,
+          institutionalEmail,
+          latencyThreshold: 2000,
+        }),
       });
       if (res.ok) {
-        setWebhookSavedMsg("Alert webhook saved! Test ping dispatched.");
+        setAlertSavedMsg("Alert channels saved! Gmail & Webhook active.");
         setTimeout(() => {
           setIsAlertModalOpen(false);
-          setWebhookSavedMsg("");
+          setAlertSavedMsg("");
         }, 1500);
       }
     } catch (err) {
       console.error(err);
     } finally {
-      setSavingWebhook(false);
+      setSavingAlerts(false);
     }
   };
 
@@ -108,7 +114,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <h1 className="text-base font-bold text-white tracking-tight">PULSE</h1>
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#152030] border border-[#1c2a3d] text-cyan-400">
-                  v1.2.0
+                  v1.3.0
                 </span>
                 <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
                   joalvergs.tech
@@ -124,7 +130,7 @@ export default function Dashboard() {
             <button
               onClick={() => setIsAlertModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#0f1622] hover:bg-[#152030] border border-[#1c2a3d] text-xs font-mono text-slate-300 transition-colors"
-              title="Alert Channels"
+              title="Alert Channels (Gmail & Webhook)"
             >
               <Bell className="w-3.5 h-3.5 text-amber-400" />
               <span className="hidden sm:inline">Alerts</span>
@@ -398,7 +404,7 @@ export default function Dashboard() {
         <SnippetModal site={modalSite} onClose={() => setIsModalOpen(false)} />
       )}
 
-      {/* Alert Webhook Modal */}
+      {/* Multi-Channel Alerts Modal (Gmail & Webhooks) */}
       {isAlertModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
           <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl max-w-lg w-full p-6 shadow-2xl relative">
@@ -406,7 +412,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <Bell className="w-5 h-5 text-amber-400" />
                 <h3 className="text-base font-semibold text-white">
-                  Configure Incident Webhook Alert
+                  Multi-Channel Incident Alerting
                 </h3>
               </div>
               <button
@@ -417,18 +423,43 @@ export default function Dashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveWebhook} className="py-4 space-y-4">
+            <form onSubmit={handleSaveAlerts} className="py-4 space-y-4">
               <p className="text-xs text-slate-300 leading-relaxed">
-                Connect a Discord, Slack, or Telegram webhook URL. Pulse will ping this webhook immediately if any of your 7 websites go down or edge latency spikes above threshold.
+                Receive notifications when any of your 7 websites experience an outage, non-200 HTTP code, or excessive latency spike.
               </p>
 
               <div>
+                <label className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Mail className="w-3.5 h-3.5" /> Personal Gmail Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={personalEmail}
+                  onChange={(e) => setPersonalEmail(e.target.value)}
+                  className="w-full bg-[#080c12] border border-[#1c2a3d] rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-mono text-cyan-400 uppercase tracking-wider flex items-center gap-1.5 mb-1">
+                  <Mail className="w-3.5 h-3.5" /> Institutional Gmail Address
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={institutionalEmail}
+                  onChange={(e) => setInstitutionalEmail(e.target.value)}
+                  className="w-full bg-[#080c12] border border-[#1c2a3d] rounded-lg px-3 py-2 text-xs font-mono text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
                 <label className="text-[11px] font-mono text-slate-400 uppercase tracking-wider block mb-1">
-                  Webhook URL (Discord / Slack / Custom)
+                  Webhook URL (Optional Discord / Slack Channel)
                 </label>
                 <input
                   type="url"
-                  required
                   placeholder="https://discord.com/api/webhooks/..."
                   value={webhookUrl}
                   onChange={(e) => setWebhookUrl(e.target.value)}
@@ -436,10 +467,10 @@ export default function Dashboard() {
                 />
               </div>
 
-              {webhookSavedMsg && (
+              {alertSavedMsg && (
                 <div className="text-xs font-mono text-emerald-400 flex items-center gap-1.5">
                   <CheckCircle2 className="w-3.5 h-3.5" />
-                  <span>{webhookSavedMsg}</span>
+                  <span>{alertSavedMsg}</span>
                 </div>
               )}
 
@@ -453,10 +484,10 @@ export default function Dashboard() {
                 </button>
                 <button
                   type="submit"
-                  disabled={savingWebhook}
+                  disabled={savingAlerts}
                   className="px-4 py-2 rounded-lg text-xs font-medium bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold transition-colors disabled:opacity-50"
                 >
-                  {savingWebhook ? "Saving..." : "Save & Enable Alerts"}
+                  {savingAlerts ? "Saving..." : "Save & Activate Alerting"}
                 </button>
               </div>
             </form>

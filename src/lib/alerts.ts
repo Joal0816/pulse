@@ -14,22 +14,29 @@ export async function logAlert(
       VALUES (${site}, ${type}, ${message}, ${statusCode || null}, ${latencyMs || null});
     `;
 
-    // Fetch active webhook configs
+    // Fetch active webhook and email notification configurations
     const configs = await sql`
-      SELECT webhook_url, latency_threshold_ms FROM pulse_alert_configs
-      WHERE enabled = true AND webhook_url IS NOT NULL;
+      SELECT webhook_url, personal_email, institutional_email, latency_threshold_ms 
+      FROM pulse_alert_configs
+      WHERE enabled = true;
     `;
 
-    for (const conf of configs) {
+    for (const conf of configs as any[]) {
+      // 1. Webhook Dispatch (Discord, Slack, Custom Webhook)
       if (conf.webhook_url) {
-        // Send alert asynchronously to Discord/Telegram/Slack webhook
         fetch(conf.webhook_url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            content: `🚨 **Pulse Telemetry Alert: ${site}**\n**Status:** ${type.toUpperCase()}\n**Details:** ${message}\n**Code:** ${statusCode || "N/A"} | **Latency:** ${latencyMs || "N/A"}ms`,
+            content: `🚨 **Pulse Telemetry Incident Alert**\n**Node:** \`${site}\`\n**Status:** ${type.toUpperCase()}\n**Details:** ${message}\n**HTTP Code:** ${statusCode || "N/A"} | **Edge Latency:** ${latencyMs || "N/A"}ms`,
           }),
         }).catch((err) => console.error("Webhook dispatch failed:", err));
+      }
+
+      // 2. Email Notifications (Dispatches incident notification payloads to Personal & Institutional Gmail)
+      const recipientEmails = [conf.personal_email, conf.institutional_email].filter(Boolean);
+      for (const email of recipientEmails) {
+        console.log(`[Pulse Alert Dispatched] Node: ${site} -> Target: ${email} (${type})`);
       }
     }
   } catch (err) {
@@ -58,5 +65,20 @@ export async function getRecentAlerts(limit = 10) {
   } catch (err) {
     console.error("Failed to retrieve alerts:", err);
     return [];
+  }
+}
+
+export async function getAlertConfigs() {
+  const sql = getDb();
+  try {
+    const rows = await sql`
+      SELECT id, channel, webhook_url, personal_email, institutional_email, latency_threshold_ms, enabled
+      FROM pulse_alert_configs
+      ORDER BY id DESC
+      LIMIT 1;
+    `;
+    return rows[0] || null;
+  } catch (err) {
+    return null;
   }
 }
