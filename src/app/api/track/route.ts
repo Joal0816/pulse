@@ -4,8 +4,8 @@ import { parseUserAgent } from "@/lib/analytics";
 import { TrackEvent, MONITORED_SITES } from "@/lib/types";
 import crypto from "crypto";
 
-// Allowed origins: self and any joalvergs.tech domain / subdomain (single or multi-level)
-const ALLOWED_ORIGIN_REGEX = /^https?:\/\/(localhost(:\d+)?|([a-z0-9-]+\.)*joalvergs\.tech)$/i;
+// Allowed origins: self, localhost, or official single-level *.joalvergs.tech domains
+const ALLOWED_ORIGIN_REGEX = /^https?:\/\/(localhost(:\d+)?|([a-z0-9-]+\.)?joalvergs\.tech)$/i;
 
 function getCorsHeaders(origin: string | null) {
   const isAllowed = origin && ALLOWED_ORIGIN_REGEX.test(origin);
@@ -13,6 +13,7 @@ function getCorsHeaders(origin: string | null) {
     "Access-Control-Allow-Origin": isAllowed ? origin : "https://joalvergs.tech",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
+    "Vary": "Origin",
   };
 }
 
@@ -62,8 +63,8 @@ export async function POST(req: NextRequest) {
     try {
       const ua = (req.headers.get("user-agent") || "").slice(0, 500);
       uaDetails = parseUserAgent(ua);
-    } catch {
-      // Fallback defaults preserved
+    } catch (uaErr) {
+      console.warn("UA parsing failed, fallback used:", uaErr);
     }
 
     // Geo headers (Vercel / Cloudflare edge sanitized)
@@ -90,8 +91,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true }, { status: 200, headers: corsHeaders });
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Internal error";
-    return NextResponse.json({ ok: false, error: errorMsg }, { status: 500, headers: corsHeaders });
+    console.error("Track endpoint unhandled failure:", err);
+    return NextResponse.json({ ok: false, error: "Internal processing error" }, { status: 500, headers: corsHeaders });
   }
 }
 
