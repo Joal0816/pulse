@@ -1,0 +1,12 @@
+# .gitignore
+node_modules/
+.next/
+dist/
+build/
+.env*.local
+.env
+.slim/deepwork/
+android/app/build/
+android/.gradle/
+android/local.properties
+*.apk

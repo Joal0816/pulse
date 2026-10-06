@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Pulse Telemetry</string>
+    <string name="title_activity_main">Pulse Telemetry</string>
+    <string name="package_name">tech.joalvergs.pulse</string>
+    <string name="custom_url_scheme">tech.joalvergs.pulse</string>
+</resources>
