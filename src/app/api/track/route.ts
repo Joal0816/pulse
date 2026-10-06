@@ -59,7 +59,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Safe user-agent parsing wrapped in try/catch to avoid failure cascades
-    let uaDetails = { browser: "Unknown", os: "Unknown", device: "desktop" as const };
+    let uaDetails: { browser: string; os: string; device: "desktop" | "mobile" | "tablet" } = {
+      browser: "Unknown",
+      os: "Unknown",
+      device: "desktop",
+    };
     try {
       const ua = (req.headers.get("user-agent") || "").slice(0, 500);
       uaDetails = parseUserAgent(ua);

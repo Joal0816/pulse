@@ -18,10 +18,10 @@ function parseUserAgent(ua: string) {
   else if (/Chrome\/([0-9.]+)/.test(ua)) browser = "Chrome";
   else if (/Safari\/([0-9.]+)/.test(ua)) browser = "Safari";
 
-  if (/Windows/i.test(ua)) os = "Windows";
-  else if (/Macintosh|Mac OS X/i.test(ua)) os = "macOS";
+  if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
   else if (/Android/i.test(ua)) os = "Android";
-  else if (/iPhone|iPad|iPod/i.test(ua)) os = "iOS";
+  else if (/Windows/i.test(ua)) os = "Windows";
+  else if (/Macintosh|Mac OS X/i.test(ua)) os = "macOS";
   else if (/Linux/i.test(ua)) os = "Linux";
 
   return { browser, os, device };
