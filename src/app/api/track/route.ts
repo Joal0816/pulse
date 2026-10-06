@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { recordEvent } from "@/lib/store";
 import { parseUserAgent } from "@/lib/analytics";
-import { TrackEvent, MONITORED_SITES } from "@/lib/types";
+import { TrackEvent, MONITORED_SITES, UADetails } from "@/lib/types";
 import crypto from "crypto";
 
 // Allowed origins: self, localhost, or official single-level *.joalvergs.tech domains
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Safe user-agent parsing wrapped in try/catch to avoid failure cascades
-    let uaDetails: { browser: string; os: string; device: "desktop" | "mobile" | "tablet" } = {
+    let uaDetails: UADetails = {
       browser: "Unknown",
       os: "Unknown",
       device: "desktop",

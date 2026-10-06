@@ -74,6 +74,12 @@ export const MONITORED_SITES: MonitoredSite[] = [
   },
 ];
 
+export type UADetails = {
+  browser: string;
+  os: string;
+  device: "desktop" | "mobile" | "tablet";
+};
+
 export interface TrackEvent {
   site: string;
   type: string;

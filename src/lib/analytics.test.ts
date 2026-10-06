@@ -28,4 +28,21 @@ describe("Pulse Telemetry Core", () => {
     expect(res2.os).toBe("iOS");
     expect(res2.device).toBe("mobile");
   });
+
+  it("should safely handle empty, malformed, or abnormally long User-Agent strings", () => {
+    const emptyRes = parseUserAgent("");
+    expect(emptyRes.browser).toBe("Other");
+    expect(emptyRes.os).toBe("Other");
+    expect(emptyRes.device).toBe("desktop");
+
+    const longUa = "A".repeat(2000);
+    const longRes = parseUserAgent(longUa);
+    expect(longRes.browser).toBe("Other");
+    expect(longRes.os).toBe("Other");
+
+    const androidTablet = "Mozilla/5.0 (Linux; Android 12; SM-X906N Build/SP1A.210812.016) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36";
+    const tabletRes = parseUserAgent(androidTablet);
+    expect(tabletRes.os).toBe("Android");
+    expect(tabletRes.browser).toBe("Chrome");
+  });
 });
