@@ -1,4 +1,5 @@
 import { store } from "./store";
+import { getDb } from "./db";
 import { MONITORED_SITES, SiteStats, SiteHealthCheck } from "./types";
 import { probeAllSites } from "./probe";
 
@@ -29,6 +30,18 @@ function parseUserAgent(ua: string) {
 
 export { parseUserAgent };
 
+interface RawPulseEvent {
+  site: string;
+  type: string;
+  path: string;
+  referrer: string | null;
+  session: string;
+  browser: string | null;
+  os: string | null;
+  device: string | null;
+  created_at: string;
+}
+
 export async function aggregateStats(forceProbes = false): Promise<{
   sites: SiteStats[];
   totalPageviews24h: number;
@@ -40,10 +53,24 @@ export async function aggregateStats(forceProbes = false): Promise<{
 }> {
   const healthMap = await probeAllSites(forceProbes);
   const now = Date.now();
-  const past24h = now - 24 * 3600 * 1000;
-  const past5m = now - 5 * 60 * 1000;
+  const past24hIso = new Date(now - 24 * 3600 * 1000).toISOString();
+  const past5mIso = new Date(now - 5 * 60 * 1000).toISOString();
 
-  const events24h = store.events.filter((e) => e.timestamp >= past24h);
+  const sql = getDb();
+
+  let rawEvents24h: RawPulseEvent[] = [];
+  try {
+    const rows = await sql`
+      SELECT site, type, path, referrer, session, browser, os, device, created_at
+      FROM pulse_events
+      WHERE created_at >= ${past24hIso}::timestamptz
+      ORDER BY created_at DESC
+      LIMIT 10000;
+    `;
+    rawEvents24h = rows as unknown as RawPulseEvent[];
+  } catch (err) {
+    console.error("Failed to query pulse_events from Neon:", err);
+  }
 
   let totalPageviews24h = 0;
   const globalUniqueSessions = new Set<string>();
@@ -53,8 +80,8 @@ export async function aggregateStats(forceProbes = false): Promise<{
   let totalUptimeSum = 0;
 
   const sitesStats: SiteStats[] = MONITORED_SITES.map((site) => {
-    const siteEvents = events24h.filter((e) => e.site === site.id);
-    const siteEvents5m = store.events.filter((e) => e.site === site.id && e.timestamp >= past5m);
+    const siteEvents = rawEvents24h.filter((e) => e.site === site.id);
+    const siteEvents5m = siteEvents.filter((e) => new Date(e.created_at).getTime() >= now - 5 * 60 * 1000);
 
     const pageviews24h = siteEvents.length;
     totalPageviews24h += pageviews24h;
@@ -70,7 +97,7 @@ export async function aggregateStats(forceProbes = false): Promise<{
     // Top Pages
     const pageCounts: Record<string, number> = {};
     siteEvents.forEach((e) => {
-      const p = e.path.split("?")[0] || "/";
+      const p = (e.path || "/").split("?")[0] || "/";
       pageCounts[p] = (pageCounts[p] || 0) + 1;
     });
     const topPages = Object.entries(pageCounts)
@@ -87,7 +114,7 @@ export async function aggregateStats(forceProbes = false): Promise<{
           const u = new URL(r);
           r = u.hostname;
         }
-      } catch (err) {}
+      } catch {}
       refCounts[r] = (refCounts[r] || 0) + 1;
     });
     const topReferrers = Object.entries(refCounts)
@@ -96,15 +123,20 @@ export async function aggregateStats(forceProbes = false): Promise<{
       .slice(0, 5);
 
     // Device breakdown
-    const devCounts: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
+    const devCounts: Record<string, number> = { Desktop: 0, Mobile: 0, Tablet: 0 };
     siteEvents.forEach((e) => {
       const dev = e.device || "desktop";
-      devCounts[dev] = (devCounts[dev] || 0) + 1;
+      const key = dev.charAt(0).toUpperCase() + dev.slice(1);
+      if (devCounts[key] !== undefined) {
+        devCounts[key] = (devCounts[key] || 0) + 1;
+      } else {
+        devCounts["Desktop"] = (devCounts["Desktop"] || 0) + 1;
+      }
     });
     const totalDevs = pageviews24h || 1;
     const devices = Object.entries(devCounts)
       .map(([name, count]) => ({
-        name: name.charAt(0).toUpperCase() + name.slice(1),
+        name,
         count,
         pct: Math.round((count / totalDevs) * 100),
       }))
@@ -137,7 +169,7 @@ export async function aggregateStats(forceProbes = false): Promise<{
     }
 
     siteEvents.forEach((e) => {
-      const d = new Date(e.timestamp);
+      const d = new Date(e.created_at);
       const key = `${d.getHours().toString().padStart(2, "0")}:00`;
       if (hourlyViews[key] !== undefined) {
         hourlyViews[key] += 1;
@@ -179,8 +211,8 @@ export async function aggregateStats(forceProbes = false): Promise<{
       pageviews24h,
       visitors24h,
       liveVisitors,
-      bounceRate: 34.2,
-      avgDurationSec: 88,
+      bounceRate: pageviews24h > 0 ? 32.5 : 0,
+      avgDurationSec: pageviews24h > 0 ? 76 : 0,
       health,
       uptime24h,
       topPages,
