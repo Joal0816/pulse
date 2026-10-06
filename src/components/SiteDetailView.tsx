@@ -9,7 +9,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { Download, Zap, Code2, Users, Eye, ArrowLeft, Activity } from "lucide-react";
+import { Download, Zap, Code2, Users, Eye, ArrowLeft, Calendar } from "lucide-react";
 import { SiteStats } from "@/lib/types";
 
 interface SiteDetailViewProps {
@@ -52,14 +52,20 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
                 {health.ok ? "ONLINE" : "DEGRADED"}
               </span>
             </div>
-            <a
-              href={site.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-xs font-mono text-cyan-400 hover:underline"
-            >
-              {site.url} ↗
-            </a>
+            <div className="flex items-center gap-3 mt-0.5">
+              <a
+                href={site.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-mono text-cyan-400 hover:underline"
+              >
+                {site.url} ↗
+              </a>
+              <span className="text-[11px] font-mono text-slate-400 flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-slate-500" />
+                Deployed: {site.deployedDate} ({stats.daysDeployed} days ago)
+              </span>
+            </div>
           </div>
         </div>
 
@@ -100,21 +106,21 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
         </div>
 
         <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl p-3.5">
-          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">24h Uniq Users</div>
+          <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider">24h Viewers</div>
           <div className="text-xl font-bold font-mono text-cyan-400 mt-1 tabular-nums">
             {stats.visitors24h.toLocaleString()}
           </div>
         </div>
 
         <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-3.5">
-          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Views (All-Time)</div>
+          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Views (Since Deployment)</div>
           <div className="text-xl font-bold font-mono text-cyan-300 mt-1 tabular-nums">
             {(stats.allTimePageviews || 0).toLocaleString()}
           </div>
         </div>
 
         <div className="bg-[#0f1622] border border-cyan-500/20 bg-cyan-950/10 rounded-xl p-3.5">
-          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Viewers (All-Time)</div>
+          <div className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider">Total Viewers (Since Deployment)</div>
           <div className="text-xl font-bold font-mono text-cyan-200 mt-1 tabular-nums">
             {(stats.allTimeVisitors || 0).toLocaleString()}
           </div>
@@ -175,16 +181,12 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
         <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl p-5">
           <h3 className="text-xs font-semibold text-white font-mono uppercase tracking-wider mb-3">Top Pages</h3>
           <div className="space-y-2">
-            {topPages.length === 0 ? (
-              <p className="text-xs text-slate-500 font-mono">No pageview data recorded yet</p>
-            ) : (
-              topPages.map((p, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs py-1.5 border-b border-[#1c2a3d]/50">
-                  <span className="font-mono text-slate-300 truncate max-w-[240px]">{p.path}</span>
-                  <span className="font-mono font-medium text-cyan-400 tabular-nums">{p.views}</span>
-                </div>
-              ))
-            )}
+            {topPages.map((p, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs py-1.5 border-b border-[#1c2a3d]/50">
+                <span className="font-mono text-slate-300 truncate max-w-[240px]">{p.path}</span>
+                <span className="font-mono font-medium text-cyan-400 tabular-nums">{p.views}</span>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -192,16 +194,12 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
         <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl p-5">
           <h3 className="text-xs font-semibold text-white font-mono uppercase tracking-wider mb-3">Top Referrers</h3>
           <div className="space-y-2">
-            {topReferrers.length === 0 ? (
-              <p className="text-xs text-slate-500 font-mono">No referrer data recorded yet</p>
-            ) : (
-              topReferrers.map((r, idx) => (
-                <div key={idx} className="flex items-center justify-between text-xs py-1.5 border-b border-[#1c2a3d]/50">
-                  <span className="font-mono text-slate-300 truncate max-w-[240px]">{r.source}</span>
-                  <span className="font-mono font-medium text-emerald-400 tabular-nums">{r.views}</span>
-                </div>
-              ))
-            )}
+            {topReferrers.map((r, idx) => (
+              <div key={idx} className="flex items-center justify-between text-xs py-1.5 border-b border-[#1c2a3d]/50">
+                <span className="font-mono text-slate-300 truncate max-w-[240px]">{r.source}</span>
+                <span className="font-mono font-medium text-emerald-400 tabular-nums">{r.views}</span>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -212,21 +210,17 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
         <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl p-5">
           <h3 className="text-xs font-semibold text-white font-mono uppercase tracking-wider mb-3">Device Types</h3>
           <div className="space-y-2">
-            {devices.length === 0 ? (
-              <p className="text-xs text-slate-500 font-mono">No device logs yet</p>
-            ) : (
-              devices.map((d, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-300">{d.name}</span>
-                    <span className="text-slate-400 tabular-nums">{d.pct}% ({d.count})</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-[#080c12] rounded-full overflow-hidden">
-                    <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${d.pct}%` }} />
-                  </div>
+            {devices.map((d, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-slate-300">{d.name}</span>
+                  <span className="text-slate-400 tabular-nums">{d.pct}% ({d.count})</span>
                 </div>
-              ))
-            )}
+                <div className="h-1.5 w-full bg-[#080c12] rounded-full overflow-hidden">
+                  <div className="h-full bg-cyan-400 rounded-full" style={{ width: `${d.pct}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -234,21 +228,17 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
         <div className="bg-[#0f1622] border border-[#1c2a3d] rounded-xl p-5">
           <h3 className="text-xs font-semibold text-white font-mono uppercase tracking-wider mb-3">Browsers</h3>
           <div className="space-y-2">
-            {browsers.length === 0 ? (
-              <p className="text-xs text-slate-500 font-mono">No browser logs yet</p>
-            ) : (
-              browsers.map((b, idx) => (
-                <div key={idx} className="space-y-1">
-                  <div className="flex justify-between text-xs font-mono">
-                    <span className="text-slate-300">{b.name}</span>
-                    <span className="text-slate-400 tabular-nums">{b.pct}% ({b.count})</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-[#080c12] rounded-full overflow-hidden">
-                    <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${b.pct}%` }} />
-                  </div>
+            {browsers.map((b, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-between text-xs font-mono">
+                  <span className="text-slate-300">{b.name}</span>
+                  <span className="text-slate-400 tabular-nums">{b.pct}% ({b.count})</span>
                 </div>
-              ))
-            )}
+                <div className="h-1.5 w-full bg-[#080c12] rounded-full overflow-hidden">
+                  <div className="h-full bg-emerald-400 rounded-full" style={{ width: `${b.pct}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -258,7 +248,7 @@ export function SiteDetailView({ stats, onBack, onOpenSnippet }: SiteDetailViewP
           <div className="space-y-2">
             {customEvents.length === 0 ? (
               <div className="text-xs text-slate-500 font-mono space-y-1">
-                <p>No custom events fired.</p>
+                <p>No custom events logged yet.</p>
                 <p className="text-[10px] text-slate-600">Call `window.pulse.track(&apos;name&apos;)` anywhere to log conversions.</p>
               </div>
             ) : (

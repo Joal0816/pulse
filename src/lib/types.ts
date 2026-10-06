@@ -6,6 +6,7 @@ export interface MonitoredSite {
   platform: "Vercel" | "Cloudflare Pages" | "Custom / Supertape";
   description: string;
   tags: string[];
+  deployedDate: string; // DNS creation date from record zone
 }
 
 export const MONITORED_SITES: MonitoredSite[] = [
@@ -17,6 +18,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Custom / Supertape",
     description: "Main portfolio and apex landing",
     tags: ["apex", "portfolio"],
+    deployedDate: "2026-09-09",
   },
   {
     id: "agapai",
@@ -26,6 +28,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Vercel",
     description: "Emergency dispatch & AI triage system",
     tags: ["emergency", "ai", "dispatch"],
+    deployedDate: "2026-09-13",
   },
   {
     id: "aruga",
@@ -35,6 +38,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Cloudflare Pages",
     description: "Fall detection & inactivity computer vision monitoring",
     tags: ["eldercare", "cv", "yolo"],
+    deployedDate: "2026-10-02",
   },
   {
     id: "barangay-connect",
@@ -44,6 +48,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Vercel",
     description: "Citizen portal & barangay governance management",
     tags: ["govtech", "community"],
+    deployedDate: "2026-09-09",
   },
   {
     id: "cup",
@@ -53,6 +58,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Cloudflare Pages",
     description: "Coffee sustainability lifecycle assessment & tracker",
     tags: ["sustainability", "research"],
+    deployedDate: "2026-10-02",
   },
   {
     id: "oddjobs",
@@ -62,6 +68,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Vercel",
     description: "Local micro-services and freelance work marketplace",
     tags: ["marketplace", "technopreneurship"],
+    deployedDate: "2026-09-30",
   },
   {
     id: "oink",
@@ -71,6 +78,7 @@ export const MONITORED_SITES: MonitoredSite[] = [
     platform: "Vercel",
     description: "Smart livestock & swine health monitoring system",
     tags: ["agritech", "iot"],
+    deployedDate: "2026-09-28",
   },
 ];
 
@@ -111,9 +119,10 @@ export interface SiteStats {
   // 24-hour metrics
   pageviews24h: number;
   visitors24h: number;
-  // All-time metrics (Lifetime)
+  // All-time metrics (From domain creation)
   allTimePageviews: number;
   allTimeVisitors: number;
+  daysDeployed: number;
   // Live now (Active in last 5 min)
   liveVisitors: number;
   bounceRate: number;
